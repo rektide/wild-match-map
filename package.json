@@ -1,0 +1,15 @@
+{
+	"name": "wild-match-map",
+	"version": "0.9.0",
+	"description": "",
+	"main": "wild-match-map.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://archive.voodoowarez.com/wild-match-map"
+	},
+	"author": "rektide de la faye",
+	"license": "X"
+}
