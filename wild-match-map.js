@@ -87,7 +87,8 @@ function findMatches(){
 
 
 var ORDINAL= 0,
-  POS= 1
+  POS= 1,
+  NEXT= 2
 
 /**
   Return a key-map of keys that match the slot
@@ -101,18 +102,18 @@ function findMatch( slot, keys, matches){
 	// searches are spun up for each key, and duplicated if necessary
 	var searches= []
 	for(var i= 0; i< keys.length; ++i){
-		searches[i]= [i, 0] // KEY-ORDINAL, POS
+		searches[i]= [i, 0, null] // KEY-ORDINAL, POS, NEXT
 	}
 
 	// iterate character by character through the slot
-	var nextPos
-	for(var i= 0; i< slot.length; i= nextPos){
+	var nextSlot
+	for(var i= 0; i< slot.length; i= nextSlot){
 		// pull out the present slot character
 		var slotChar= slot[ i],
 		  wildSlot= slotChar=== "*"
 		// if the slot character is a wildcard, find the next meaningful char (& distance to)
-		nextPos= wildSlot ? nonWild(slot, i+ 1) : i+ 1
-		var nextChar= slot[ nextPos]
+		nextSlot= wildSlot ? nonWild(slot, i+ 1) : i+ 1
+		var nextChar= slot[ nextSlot]
 
 		// iterate through all ongoing searches
 		for(var j= 0; j< searches.length; ++j){
@@ -127,11 +128,13 @@ function findMatch( slot, keys, matches){
 			  keyChar= key[ pos],
 			  wildKey= keyChar=== "*"
 
-			if( slotChar=== "*"){
+			if( wildSlot){
 				// if slot _ends_ with *, match all remaining survivors
 				if( nextChar=== undefined){
-					matches[ key]= true
-					added= true
+					if( !matches[ key]){
+						matches[ key]= true
+						added= true
+					}
 					searches[ j]= null
 					continue
 				}
@@ -162,16 +165,35 @@ function findMatch( slot, keys, matches){
 					// there's more chars on slot, but nothing remaining in the key that will match
 					searches[ j]= null
 					continue
+				}else{
 				}
-			}else if( keyChar== slotChar || wildKey){
-				// alternative searches are already launched for other wildKeys
-				var len= ++search[ POS]
-				if(wildKey && key.length >= len){
-					// end of key & is wildcard
-					matches[ key]= true
-					added= true
-					searches[ j]= null
+			}else if( wildKey){
+				var nextPos= search[ NEXT]
+				if( nextPos=== null){
+					// first time here, attempt to find nextKey
+					nextPos= nonWild( key, pos+ 1)
+
+					if( nextPos>= key.length){
+						// wildcard is complete, done with search
+						if( !matches[key]){
+							matches[key]= true
+							added= true
+						}
+						searches[j]= null
+						continue
+					}
+					search[ NEXT]= nextPos
 				}
+				var nextKey= key[ nextPos]
+				if( nextKey=== slotChar){
+					// fork new search if we match
+					var copy= [ search[ ORDINAL], search[ NEXT], null]
+					searches.push(copy)
+				}
+			}else if( keyChar== slotChar){
+				++search[ POS]
+			}else if(pos >= key.length){
+				throw new Error("We should already have matched") // and cleaned up the search
 			}else{
 				// couldn't match
 				searches[ j]= null
@@ -182,10 +204,17 @@ function findMatch( slot, keys, matches){
 		if( !searches[i]){
 			continue
 		}
-		var ordinal= searches[ i][ ORDINAL],
-		  key= keys[ordinal]
-		matches[ key]= true
-		added= true
+		var search= searches[ i],
+		  ordinal= searches[ i][ ORDINAL],
+		  key= keys[ordinal],
+		  pos= search[ POS]
+		if( pos< key.length){
+			continue
+		}
+		if( !matches[ key]){
+			matches[ key]= true
+			added= true
+		}
 	}
 	return added? matches: null
 }
@@ -196,6 +225,29 @@ function nonWild(str, n){
 	while( str[ n]=== "*")
 		++n
 	return n
+}
+
+/**
+  @param chr - character to find
+  @param str - str to search in
+  @param n - start looking in str from this position
+*/
+function nextMatches(chr, str, n){
+	var positions= [],
+	  prev
+	for(; n< str.length; ++n){
+		var futureChar= str[n]
+		if( futureChar=== chr|| futureChar=== "*"){
+			if( prev=== n){
+				// duplicate match to previous, update the previous
+				++positions[ positions.length- 1]
+			}else{
+				positions.push(n)
+				prev= n+ 1
+			}
+		}
+	}
+	return positions
 }
 
 function parse(keyString, sep){
