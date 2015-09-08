@@ -46,7 +46,10 @@ tape(path.basename(__filename), function(t){
 		{ x:{ n: 14}},
 		{ x:{ n: 15}}], "final shape looks good")
 
-	var nestedStar= map.get( "*HIYA*:x")
-	t.equals( nestedStar.length, 5, "double wildcard matches existing")
+	map.get("r*r")
+
+	var nestedStar= map.get( "*HIYA*r:x")
+	console.log(nestedStar)
+	t.equals( nestedStar.length, 6, "double wildcard matches existing")
 	t.end()
 })
