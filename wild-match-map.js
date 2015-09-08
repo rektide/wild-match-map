@@ -6,13 +6,37 @@ WildMatchMap.prototype.get= function get(key){
 	return getter.call(this)
 }
 
-WildMatchMap.getter= function(keys){
+WildMatchMap.prototype.set= function set(key, value){
+	
+}
+
+/**
+  Find all leaves
+*/
+WildMatchMap.getter= function(keys, create){
 	keys= parse(keys)
 	return function(){
-		var cursor= this,
-		  matches= {}
-		for(var i of keys){
-			var key= keys[i]
+		var cursors= [this]
+		for(var key of keys){
+			var next= []
+			for(var i= 0; i< cursors.length; ++i){
+				var el= cursors[i],
+				  matches
+				for(var slot in el){
+					matches= findMatches(slot, [key])
+				}
+				if( matches|| create&& !matches){
+					if(!matches){
+						cursor[key]= {}
+						matches= {key: true}
+					}
+					for(var j in matches){
+						var match= cursor[ matches[ j]]
+						next.push(match)
+					}
+				}
+			}
+			cursors= next
 		}
 		return matches
 	}
@@ -23,6 +47,7 @@ var ORDINAL= 0,
   POS= 1
 
 function findMatches( slot, keys, matches){
+	var added= false
 	matches= matches|| {}
 
 	var searches= []
@@ -34,11 +59,11 @@ function findMatches( slot, keys, matches){
 	for(var i= 0; i< slot.length; i= nextPos){
 		var slotChar= slot[ i],
 		  wildSlot= slotChar=== "*"
-		nextPos= wildSlot ? nonWild(slot, i+ 1) : i+ 1,
+		nextPos= wildSlot ? nonWild(slot, i+ 1) : i+ 1
 		var nextChar= slot[ nextPos]
 
 		for(var j= 0; j< searches.length; ++j){
-			var search= searches[ j],
+			var search= searches[ j]
 			if( !search){
 				continue
 			}
@@ -52,12 +77,13 @@ function findMatches( slot, keys, matches){
 				if(nextChar === undefined){
 					searches[ j]= null
 					matches[ key]= true
+					added= true
 					continue
 				}
 
 				// more chars to match; duplicate this search for all places the next character might begin
 				var made= null
-				for(var k= pos, k< key.length; ++k){
+				for(var k= pos; k< key.length; ++k){
 					var futureChar= key[k]
 					if( futureChar=== nextChar|| futureChar=== "*"){
 						var last= made!== null ? searches[ made] : undefined
@@ -96,9 +122,10 @@ function findMatches( slot, keys, matches){
 			continue
 		}
 		var key= searches[ i][ ORDINAL]
+		added= true
 		matches[ key]= true
 	}
-	return matches
+	return added? matches: null
 }
 
 
