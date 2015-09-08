@@ -1,5 +1,5 @@
 var fs= require("fs"),
-  tests= fs.readdirSync(".")
+  tests= fs.readdirSync(__dirname)
 
 tests.forEach(function(test){
 	if(!test.endsWith(".js")){
