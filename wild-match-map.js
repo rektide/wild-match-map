@@ -31,6 +31,9 @@ Object.defineProperty(WildMatchMap.prototype, "set", {
 	}
 })
 
+/**
+  For a list of keys, find all slots 
+*/
 function getter(keys, create, set){
 	keys= parse(keys)
 	return function(){
@@ -47,7 +50,9 @@ function getter(keys, create, set){
 				  matches= {}
 				for(var slot in cursor){
 					// find all matching keys for this cursor
-					findMatches(slot, [key], matches)
+					if(findMatch(slot, [key])){
+						matches[slot]= true
+					}
 				}
 				if( matches|| create|| set){
 					if(!matches){
@@ -55,9 +60,10 @@ function getter(keys, create, set){
 						matches= {}
 					}
 					if( create && !matches[key]){
-						// create our match
-						cursor[key]= this._generator ? this._generator() : {}
-						matches[key]= true
+						// create our exact match
+						var match= this._generator? this._generator(): {}
+						cursor[ key]= match
+						matches[ key]= true
 					}
 					for(var k in matches){
 						if( !lastSet){
@@ -76,42 +82,57 @@ function getter(keys, create, set){
 	}
 }
 
+function findMatches(){
+}
+
 
 var ORDINAL= 0,
   POS= 1
 
-function findMatches( slot, keys, matches){
+/**
+  Return a key-map of keys that match the slot
+  @param slot - slot name to test against
+  @param keys - array of expressions to test with
+*/
+function findMatch( slot, keys, matches){
 	var added= false
 	matches= matches|| {}
 
+	// searches are spun up for each key, and duplicated if necessary
 	var searches= []
 	for(var i= 0; i< keys.length; ++i){
 		searches[i]= [i, 0] // KEY-ORDINAL, POS
 	}
 
+	// iterate character by character through the slot
 	var nextPos
 	for(var i= 0; i< slot.length; i= nextPos){
+		// pull out the present slot character
 		var slotChar= slot[ i],
 		  wildSlot= slotChar=== "*"
+		// if the slot character is a wildcard, find the next meaningful char (& distance to)
 		nextPos= wildSlot ? nonWild(slot, i+ 1) : i+ 1
 		var nextChar= slot[ nextPos]
 
+		// iterate through all ongoing searches
 		for(var j= 0; j< searches.length; ++j){
 			var search= searches[ j]
 			if( !search){
+				// search has terminated
 				continue
 			}
-			var key= keys[ search[ ORDINAL]],
+			var ordinal= search[ ORDINAL],
+			  key= keys[ ordinal],
 			  pos= search[ POS],
 			  keyChar= key[ pos],
 			  wildKey= keyChar=== "*"
 
 			if( slotChar=== "*"){
-				// if slot ends with *, match survivors
-				if(nextChar === undefined){
-					searches[ j]= null
+				// if slot _ends_ with *, match all remaining survivors
+				if( nextChar=== undefined){
 					matches[ key]= true
 					added= true
+					searches[ j]= null
 					continue
 				}
 
@@ -144,7 +165,13 @@ function findMatches( slot, keys, matches){
 				}
 			}else if( keyChar== slotChar || wildKey){
 				// alternative searches are already launched for other wildKeys
-				++search[ POS]
+				var len= ++search[ POS]
+				if(wildKey && key.length >= len){
+					// end of key & is wildcard
+					matches[ key]= true
+					added= true
+					searches[ j]= null
+				}
 			}else{
 				// couldn't match
 				searches[ j]= null
@@ -157,8 +184,8 @@ function findMatches( slot, keys, matches){
 		}
 		var ordinal= searches[ i][ ORDINAL],
 		  key= keys[ordinal]
-		added= true
 		matches[ key]= true
+		added= true
 	}
 	return added? matches: null
 }

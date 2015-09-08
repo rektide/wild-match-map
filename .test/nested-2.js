@@ -4,8 +4,8 @@ var tape= require("tape"),
 
 tape(path.basename(__filename), function(t){
 	var map= new Wmm({generator: true})
-	map.get("a:b")
-	var a= map.get("a")
+	map.get("a:b")[0].c = 77
+	var a= map.get("*")
 	t.ok(a[0].b, "Asking for a:b creates a.b")
 	t.end()
 })
