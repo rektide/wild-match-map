@@ -11,5 +11,8 @@
 		"url": "https://archive.voodoowarez.com/wild-match-map"
 	},
 	"author": "rektide de la faye",
-	"license": "X"
+	"license": "X",
+	"devDependencies": {
+		"tape": "^4.2.0"
+	}
 }

@@ -2,6 +2,11 @@ function WildMatchMap(opts){
 	if(opts){
 		if(opts.generator){
 			var generator= opts.generator
+			if(generator === true){
+				generator= function(){
+					return {}
+				}
+			}
 			Object.defineProperty(this, "_generator", {
 				get: function(){
 					return generator
@@ -11,39 +16,38 @@ function WildMatchMap(opts){
 	}
 }
 
-WildMatchMap.prototype.get= function get(key){
-	var got= getter(key, !!this._generator),
-	  matches= getter.call(this)
-	return Object.keys(matches)
-}
+Object.defineProperty(WildMatchMap.prototype, "get", {
+	value: function get(key){
+		var got= getter(key, !!this._generator),
+		  matches= got.call(this)
+		return matches
+	}
+})
 
-WildMatchMap.prototype.set= function set(key, value){
-	var got= getter(key, null, value),
-	  matches= getter.call(this)
-}
+Object.defineProperty(WildMatchMap.prototype, "set", {
+	value: function set(key, value){
+		var got= getter(key, null, value),
+		  matches= getter.call(this)
+	}
+})
 
 function getter(keys, create, set){
 	keys= parse(keys)
 	return function(){
 		var cursors= [this],
-		  assign= false
+		  lastSet= false
 		for(var i= 0; i< keys.length; ++i){
 			if( set&& i+ 1=== keys.length){
-				assign= true
+				lastSet= true
 			}
 			var key= keys[i],
 			  next= []
-			for(var i= 0; i< cursors.length; ++i){
-				if( assign){
-					var old= cursors[key]
-					cursors[key]= set
-					continue
-				}
-				var el= cursors[i],
-				  matches
-				for(var slot in el){
+			for(var j= 0; j< cursors.length; ++j){
+				var cursor= cursors[j],
+				  matches= {}
+				for(var slot in cursor){
 					// find all matching keys for this cursor
-					matches= findMatches(slot, [key])
+					findMatches(slot, [key], matches)
 				}
 				if( matches|| create|| set){
 					if(!matches){
@@ -55,20 +59,20 @@ function getter(keys, create, set){
 						cursor[key]= this._generator ? this._generator() : {}
 						matches[key]= true
 					}
-					for(var j in matches){
-						if( !set){
+					for(var k in matches){
+						if( !lastSet){
 							// get the found slot
-							var match= cursor[ j]
+							var match= cursor[ k]
 							next.push( match)
 						}else{
-							cursor[ j]= set
+							cursor[ k]= set
 						}
 					}
 				}
 			}
 			cursors= next
 		}
-		return currsors
+		return cursors
 	}
 }
 
@@ -151,7 +155,8 @@ function findMatches( slot, keys, matches){
 		if( !searches[i]){
 			continue
 		}
-		var key= searches[ i][ ORDINAL]
+		var ordinal= searches[ i][ ORDINAL],
+		  key= keys[ordinal]
 		added= true
 		matches[ key]= true
 	}
@@ -181,36 +186,50 @@ Object.defineProperty(WildMatchMap.prototype, "size", {
 	}
 })
 
-WildMatchMap.prototype.clear= function(){
-	for(var key in this){
-		this.delete(key)
+Object.defineProperty(WildMatchMap.prototype, "clear", {
+	value: function(){
+		for(var key in this){
+			this.delete(key)
+		}
 	}
-}
+})
 
-WildMatchMap.prototype.delete= function(key){
-	delete this[key]
-}
+Object.defineProperty(WildMatchMap.prototype, "delete", {
+	value: function del(key){
+		delete this[key]
+	}
+})
 
-WildMatchMap.prototype.entries= function(){
-	return Object.keys(this).map(function(val, key){
-		return [key, val]
-	})
-}
+Object.defineProperty(WildMatchMap.prototype, "entries", {
+	value: function entries(){
+		return Object.keys(this).map(function(val, key){
+			return [key, val]
+		})
+	}
+})
 
-WildMatchMap.prototype.forEach= function(fn, thisArg){
-}
+Object.defineProperty(WildMatchMap.prototype, "forEach", {
+	value: function forEach(fn, thisArg){
+	}
+})
 
-WildMatchMap.prototype.has= function(key){
-	return this[key] !== undefined
-}
+Object.defineProperty(WildMatchMap.prototype, "has", {
+	value: function has(key){
+		return this[key] !== undefined
+	}
+})
 
-WildMatchMap.prototype.keys= function(){
-	return Object.keys(this)
-}
+Object.defineProperty(WildMatchMap.prototype, "keys", {
+	value: function keys(){
+		return Object.keys(this)
+	}
+})
 
-WildMatchMap.prototype.values= function(){
-	return Object.keys(this).map(function(val){return val})
-}
+Object.defineProperty(WildMatchMap.prototype, "values", {
+	value: function values(){
+		return Object.keys(this).map(function(val){return val})
+	}
+})
 
 Object.defineProperty(WildMatchMap, Symbol.species, {
 	get: function(){
